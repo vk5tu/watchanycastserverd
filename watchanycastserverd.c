@@ -66,6 +66,7 @@ static struct options_t options;
  */
 struct taskstats_handle_t {
     int netlink_generic_family_id;
+    struct sockaddr_nl peer;
 };
 
 
@@ -82,7 +83,6 @@ int taskstats_nl_connect(struct nl_handle **nl,
     struct nlmsghdr *response_message;
     int response_message_length;
     int id;
-    struct sockaddr_nl peer;
     struct nlattr *id_attribute;
 
     struct nlattr *attributes;
@@ -137,7 +137,7 @@ int taskstats_nl_connect(struct nl_handle **nl,
     nlmsg_free(msg);
 
     response_message_length = nl_recv(*nl,
-                                      &peer,
+                                      &(taskstats_handle->peer),
                                       (unsigned char **)&response_message);
     if (response_message_length <= 0) {
         errno = -response_message_length;
@@ -160,6 +160,46 @@ int taskstats_nl_connect(struct nl_handle **nl,
     return 0;
 }
     
+int taskstats_nl_read(struct nl_handle **nl,
+                      struct *taskstats_handle) {
+
+    unsigned char *msg;
+    int msg_length;
+
+    msg_length = nl_recv(*nl_handle,
+                         &(taskstats_handle->peer),
+                         &msg);
+    if (msg_length < 0) {
+        errno = -status;
+        perror("nl_recv()");
+        exit(1);
+    }
+
+    /* I think the message we are interested in contains this:
+     *   nlmsghdr -- Netlink message header
+     *   padding
+     *   genlmsghdr -- generic betlink message header, with these attributes following:
+     *   padding
+     *     TASKSTATS_TYPE_AGGR_PID -- no payload
+     *     TASKSTATS_TYPE_PID -- exiting tasks's PID
+     *     TASKSTATS_TYPE_STATS -- struct taskstats for PID
+     */
+    while (nlmsg_ok(msg, msg_length)) {
+        if (nlmsg_type == NLM_ERROR) {
+            /* Set errno to nlmsgerr error number, perror(). */
+            exit(1);
+        }
+        
+        
+
+        msg = nlmsg_next(msg, &msg_length);
+    }
+
+
+ 
+    return 0;
+}
+
 
 /**
  * main - entry point.
@@ -170,10 +210,14 @@ int main(int argc,
     struct nl_handle *nl;
     struct taskstats_handle_t taskstats_handle;
 
+
     if (taskstats_nl_connect(&nl, &taskstats_handle)) {
         perror("taskstats_nl_connect()");
         exit(1);
     }
+
+
+    /* Read 
 
     (void)nl_close(nl);
     (void)nl_handle_destroy(nl);
