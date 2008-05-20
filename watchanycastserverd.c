@@ -165,6 +165,9 @@ int taskstats_nl_read(struct nl_handle **nl,
 
     unsigned char *msg;
     int msg_length;
+    static struct nla_policy taskstats_policy[] = {
+        [ATTR_] = { .type = NLA_U16 },
+    };
 
     msg_length = nl_recv(*nl_handle,
                          &(taskstats_handle->peer),
